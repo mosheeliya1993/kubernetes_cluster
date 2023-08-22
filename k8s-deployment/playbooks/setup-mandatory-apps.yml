@@ -1,0 +1,50 @@
+---
+- name: Setup Mandatory Kubernetes Applications
+  hosts: masters
+  become: yes
+  vars_files:
+    - ../vars/env_vars.yml
+
+  tasks:
+    # Helm Installation
+    - name: Download Helm binary
+      get_url:
+        url: https://get.helm.sh/helm-v3.x.x-linux-amd64.tar.gz
+        dest: "/tmp/helm.tar.gz"
+        mode: '0755'
+
+    - name: Extract Helm tarball
+      unarchive:
+        src: "/tmp/helm.tar.gz"
+        dest: "/tmp/"
+        remote_src: yes
+
+    - name: Move Helm binary to path
+      command: mv /tmp/linux-amd64/helm /usr/local/bin/
+
+    # Initialize Helm (no longer needed for Helm 3, but kept for clarity)
+    #- name: Initialize Helm
+    #  command: helm init --upgrade
+
+    # Add your internal helm repository if you have one
+    - name: Add Internal Helm Repo
+      command: helm repo add <repo_name> <repo_url>
+      when: internal_repo_url is defined
+
+    # Install Prometheus Stack using Helm
+    - name: Install Prometheus Stack
+      command: helm install prometheus <repo_name>/prometheus-stack --values /path/to/your/values/file
+      tags: 
+        - prometheus
+
+    # Install Jaeger Operator using Helm
+    - name: Install Jaeger Operator
+      command: helm install jaeger <repo_name>/jaeger-operator --values /path/to/your/values/file
+      tags:
+        - jaeger
+
+    # Install Elasticsearch (assuming you're using the Elastic Helm charts)
+    - name: Install Elasticsearch
+      command: helm install elasticsearch <repo_name>/elasticsearch --values /path/to/your/values/file
+      tags:
+        - elasticsearch

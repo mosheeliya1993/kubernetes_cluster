@@ -1,0 +1,66 @@
+---
+- name: Prepare servers for air-gapped Kubernetes deployment
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/env_vars.yml
+
+  tasks:
+    - name: Install Kubernetes prerequisites
+      apt:
+        name: ['apt-transport-https', 'curl', 'gnupg2']
+        state: present
+
+    - name: Setup local APT repository for Kubernetes
+      apt_repository:
+        repo: "deb [trusted=yes] file:///path/to/local/repo/kubernetes ./"
+        state: present
+
+    - name: Load required container images
+      command: "docker load -i /path/to/images/{{ item }}"
+      loop: 
+        - "kube-apiserver.tar"
+        - "kube-controller-manager.tar"
+        - "kube-scheduler.tar"
+        - "kube-proxy.tar"
+        - "pause.tar"
+        - "etcd.tar"
+        - "coredns.tar"
+        # Add paths to other pre-downloaded container images as needed
+
+
+---
+- name: Air-gap Preparations for Docker Registries
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/env_vars.yml
+
+  tasks:
+    - name: Install required packages for Docker setup
+      apt:
+        name: ['apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common']
+        state: present
+
+    # Assuming you've pre-downloaded Docker packages for air-gapped installation
+    - name: Install Docker container runtime
+      apt:
+        name: ['docker-ce', 'docker-ce-cli', 'containerd.io']
+        state: present
+
+    - name: Configure Docker to use local Artifactory and Docker registry
+      copy:
+        dest: "/etc/docker/daemon.json"
+        content: |
+          {
+            "insecure-registries" : ["your-artifactory-address:port", "your-local-docker-server-address:port"]
+          }
+        backup: yes
+
+    - name: Restart Docker service for configuration to take effect
+      service:
+        name: docker
+        state: restarted
+
+    # Further tasks to prepare for air-gapped environment can be added below
+    ...

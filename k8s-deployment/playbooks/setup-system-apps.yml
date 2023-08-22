@@ -1,0 +1,32 @@
+---
+- name: Setup System Kubernetes Applications
+  hosts: masters
+  become: yes
+  vars_files:
+    - ../vars/env_vars.yml
+
+  tasks:
+    # Assuming Helm is already set up from the previous playbook
+
+    # Add any additional helm repositories if needed
+    - name: Add Jetstack Helm Repo for cert-manager
+      command: helm repo add jetstack https://charts.jetstack.io
+      when: cert_manager_enabled | default(true)
+
+    - name: Update Helm Repo
+      command: helm repo update
+
+    # Install cert-manager using Helm
+    - name: Install cert-manager
+      command: helm install cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --version v1.x.x --values /path/to/cert-manager/values.yaml
+      tags:
+        - cert-manager
+      when: cert_manager_enabled | default(true)
+
+    # Install nfs-provisioner using Helm
+    - name: Install nfs-provisioner
+      command: helm install nfs-provisioner <repo_name>/nfs-provisioner --values /path/to/nfs-provisioner/values.yaml
+      tags:
+        - nfs-provisioner
+      when: nfs_provisioner_enabled | default(true)
+

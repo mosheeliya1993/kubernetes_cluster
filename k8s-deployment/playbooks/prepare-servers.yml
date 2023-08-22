@@ -1,0 +1,41 @@
+---
+- name: Prepare Servers for Kubernetes
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/env_vars.yml
+
+  tasks:
+    # Preliminary Server Preparations
+    - name: Install Docker container runtime
+      apt:
+        name: ['docker-ce', 'docker-ce-cli', 'containerd.io']
+        state: present
+
+    - name: Start and enable Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Ensure necessary ports are open
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+      loop:
+        - '6443'
+        - '2379-2380'
+        - '10250'
+        - '10251'
+        - '10252'
+
+    - name: Disable swap
+      command: swapoff -a
+      when: ansible_swaptotal_mb > 0
+
+    - name: Remove swap from fstab
+      lineinfile:
+        path: /etc/fstab
+        regexp: '^[^#]\s*.*\s+swap\s+swap'
+        state: absent
+      when: ansible_swaptotal_mb > 0

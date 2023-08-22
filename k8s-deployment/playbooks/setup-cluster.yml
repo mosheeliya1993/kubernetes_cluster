@@ -1,0 +1,59 @@
+---
+- name: Setup Kubernetes Cluster
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/env_vars.yml
+
+  tasks:
+    - name: Set Master Node IP
+      set_fact:
+        master_node_ip: "{{ hostvars['master']['ansible_host'] }}"
+      run_once: true
+
+    - name: Set Worker Node IPs
+      set_fact:
+        worker_nodes_ips: "{{ groups['workers'] | map('extract', hostvars, 'ansible_host') | list }}"
+      run_once: true
+
+    - name: Install Kubernetes components
+      apt:
+        name: ['kubelet', 'kubeadm', 'kubectl']
+        state: present
+      notify: Restart kubelet
+
+    - name: Initialize Kubernetes Master
+      command: "kubeadm init --apiserver-advertise-address={{ master_node_ip }} --pod-network-cidr=10.244.0.0/16"
+      when: "'master' in inventory_hostname"
+      notify: Restart kubelet
+
+    - name: Set up kubeconfig for root user
+      command: "{{ item }}"
+      with_items:
+        - "mkdir -p $HOME/.kube"
+        - "cp -i /etc/kubernetes/admin.conf $HOME/.kube/config"
+        - "chown $(id -u):$(id -g) $HOME/.kube/config"
+      when: "'master' in inventory_hostname"
+
+    # Assuming you've pre-downloaded Flannel manifests for the air-gapped environment
+    - name: Deploy Flannel CNI
+      command: "kubectl apply -f /path/to/local/flannel/kube-flannel.yml"
+      when: "'master' in inventory_hostname"
+
+    # Join worker nodes to the cluster
+    - name: Retrieve join token
+      command: "kubeadm token create --print-join-command"
+      run_once: true
+      delegate_to: "{{ master_node_ip }}"
+      register: join_command
+      when: "'master' in inventory_hostname"
+
+    - name: Join worker node to Kubernetes cluster
+      command: "{{ join_command.stdout }}"
+      when: "'worker' in inventory_hostname"
+
+  handlers:
+    - name: Restart kubelet
+      service:
+        name: kubelet
+        state: restarted

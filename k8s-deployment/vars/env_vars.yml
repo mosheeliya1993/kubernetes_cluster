@@ -1,0 +1,15 @@
+---
+# Helm Repository Configuration
+internal_repo_name: "my_repo"
+internal_repo_url: "http://my-internal-repo.local"
+
+# Application Enablement Flags
+cert_manager_enabled: true
+nfs_provisioner_enabled: true
+
+# Helm Values File Paths
+prometheus_values_file_path: "/path/to/prometheus/values.yaml"
+jaeger_values_file_path: "/path/to/jaeger/values.yaml"
+elasticsearch_values_file_path: "/path/to/elasticsearch/values.yaml"
+cert_manager_values_file_path: "/path/to/cert-manager/values.yaml"
+nfs_provisioner_values_file_path: "/path/to/nfs-provisioner/values.yaml"
