@@ -23,21 +23,21 @@
       notify: Restart kubelet
 
     - name: Initialize Kubernetes Master
-      command: "kubeadm init --apiserver-advertise-address={{ master_node_ip }} --pod-network-cidr=10.244.0.0/16"
+      command: "kubeadm init --apiserver-advertise-address={{ master_node_ip }} --pod-network-cidr={{ pod_network_cidr }}"
       when: "'master' in inventory_hostname"
       notify: Restart kubelet
 
     - name: Set up kubeconfig for root user
       command: "{{ item }}"
       with_items:
-        - "mkdir -p $HOME/.kube"
-        - "cp -i /etc/kubernetes/admin.conf $HOME/.kube/config"
+        - "mkdir -p {{ kubeconfig_dir }}"
+        - "cp -i /etc/kubernetes/admin.conf {{ kubeconfig_path }}"
         - "chown $(id -u):$(id -g) $HOME/.kube/config"
       when: "'master' in inventory_hostname"
 
     # Assuming you've pre-downloaded Flannel manifests for the air-gapped environment
     - name: Deploy Flannel CNI
-      command: "kubectl apply -f /path/to/local/flannel/kube-flannel.yml"
+      command: "kubectl apply -f {{ flannel_config_path }}"
       when: "'master' in inventory_hostname"
 
     # Join worker nodes to the cluster

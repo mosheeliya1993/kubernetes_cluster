@@ -13,3 +13,10 @@ jaeger_values_file_path: "/path/to/jaeger/values.yaml"
 elasticsearch_values_file_path: "/path/to/elasticsearch/values.yaml"
 cert_manager_values_file_path: "/path/to/cert-manager/values.yaml"
 nfs_provisioner_values_file_path: "/path/to/nfs-provisioner/values.yaml"
+
+
+
+flannel_config_path: "/path/to/local/flannel/kube-flannel.yml"
+pod_network_cidr: "10.244.0.0/16"
+kubeconfig_dir: "$HOME/.kube"
+kubeconfig_path: "$HOME/.kube/config"
