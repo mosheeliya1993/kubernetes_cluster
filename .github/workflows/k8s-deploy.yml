@@ -1,0 +1,34 @@
+name: Kubernetes Deployment
+
+on:
+  push:
+    branches:
+      - main  # Adjust this if you use a different default branch
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Run tests
+      run: |
+        # Add commands to run your tests here
+
+  deploy-to-cluster:
+    runs-on: ubuntu-latest
+    needs: build-and-test  # Ensure this job runs only after the build-and-test job succeeds
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Kubeconfig
+      run: |
+        # Set up kubeconfig for your cluster here
+
+    - name: Deploy to Kubernetes
+      run: |
+        # Add commands to deploy to your Kubernetes cluster here
