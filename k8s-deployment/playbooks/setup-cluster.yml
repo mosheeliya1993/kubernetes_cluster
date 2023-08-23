@@ -20,7 +20,11 @@
       apt:
         name: ['kubelet', 'kubeadm', 'kubectl']
         state: present
-      notify: Restart kubelet
+      register: install_result
+      retries: 3
+      delay: 10
+      until: install_result is succeeded
+
 
     - name: Check if kubelet service is active
       command: systemctl is-active kubelet
@@ -29,9 +33,13 @@
 
 
     - name: Initialize Kubernetes Master
-      command: "kubeadm init --apiserver-advertise-address={{ master_node_ip }} --pod-network-cidr={{ pod_network_cidr }}"
+      command: "kubeadm init --apiserver-advertise-address={{ master_node_ip }} --pod-network-cidr=10.244.0.0/16"
       when: "'master' in inventory_hostname"
-      notify: Restart kubelet
+      register: init_result
+      retries: 3
+      delay: 15
+      until: "'[init done]' in init_result.stdout"
+
 
     - name: Check if Kubernetes API server is running
       command: kubectl get componentstatuses
@@ -51,6 +59,11 @@
     - name: Deploy Flannel CNI
       command: "kubectl apply -f {{ flannel_config_path }}"
       when: "'master' in inventory_hostname"
+      register: flannel_deploy_result
+      retries: 3
+      delay: 10
+      until: "'deployment.apps/kube-flannel-ds-amd64 created' in flannel_deploy_result.stdout"
+
 
 
     - name: Check if Flannel pods are running
@@ -70,6 +83,11 @@
     - name: Join worker node to Kubernetes cluster
       command: "{{ join_command.stdout }}"
       when: "'worker' in inventory_hostname"
+      register: join_result
+      retries: 3
+      delay: 15
+      until: "'[join] This node has joined the cluster' in join_result.stdout"
+    
 
     - name: Check if worker node is ready
       command: kubectl get nodes -l role=worker
