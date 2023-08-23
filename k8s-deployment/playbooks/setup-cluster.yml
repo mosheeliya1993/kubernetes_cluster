@@ -22,10 +22,22 @@
         state: present
       notify: Restart kubelet
 
+    - name: Check if kubelet service is active
+      command: systemctl is-active kubelet
+      register: kubelet_status
+      failed_when: kubelet_status.stdout != 'active'
+
+
     - name: Initialize Kubernetes Master
       command: "kubeadm init --apiserver-advertise-address={{ master_node_ip }} --pod-network-cidr={{ pod_network_cidr }}"
       when: "'master' in inventory_hostname"
       notify: Restart kubelet
+
+    - name: Check if Kubernetes API server is running
+      command: kubectl get componentstatuses
+      register: api_server_status
+      failed_when: "'core-apiserver' not in api_server_status.stdout"
+
 
     - name: Set up kubeconfig for root user
       command: "{{ item }}"
@@ -40,6 +52,13 @@
       command: "kubectl apply -f {{ flannel_config_path }}"
       when: "'master' in inventory_hostname"
 
+
+    - name: Check if Flannel pods are running
+      command: kubectl get pods -n kube-system -l app=flannel
+      register: flannel_pods_status
+      failed_when: "'Running' not in flannel_pods_status.stdout"
+
+
     # Join worker nodes to the cluster
     - name: Retrieve join token
       command: "kubeadm token create --print-join-command"
@@ -51,6 +70,12 @@
     - name: Join worker node to Kubernetes cluster
       command: "{{ join_command.stdout }}"
       when: "'worker' in inventory_hostname"
+
+    - name: Check if worker node is ready
+      command: kubectl get nodes -l role=worker
+      register: worker_node_status
+      failed_when: "'Ready' not in worker_node_status.stdout"
+  
 
   handlers:
     - name: Restart kubelet
